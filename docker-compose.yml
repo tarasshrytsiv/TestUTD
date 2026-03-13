@@ -1,0 +1,38 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  events-backend:
+    build:
+      context: ./events-backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: 4000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - '4000:4000'
+    volumes:
+      - ./events-backend/data:/app/data
+
+  events-frontend:
+    build:
+      context: ./events-frontend
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_API_URL: http://events-backend:4000
+      NODE_ENV: production
+    depends_on:
+      - events-backend
+    ports:
+      - '3000:3000'
